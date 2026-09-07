@@ -6,7 +6,7 @@ import {
   Building2, ChevronRight, Keyboard
 } from 'lucide-react';
 import { PageType } from '../types';
-import { notifications } from '../data/mockData';
+import { useStore } from '../store/Store';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -29,6 +29,7 @@ const menuItems: { id: PageType; label: string; icon: React.ReactNode; badge?: n
 ];
 
 export default function Layout({ children, currentPage, onPageChange }: LayoutProps) {
+  const { notifications } = useStore();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
