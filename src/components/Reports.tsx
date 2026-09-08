@@ -3,6 +3,7 @@ import { useStore, fmt } from '../store/Store';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
 import { FileText, Download, Printer, TrendingUp, PieChart as PieIcon } from 'lucide-react';
 import { monthlyData, expenseCategories } from '../data/mockData';
+import { printReport, exportToCSV } from '../utils/export';
 
 export default function Reports() {
   const { accounts, invoices, customers, transactions, journal } = useStore();
@@ -43,6 +44,57 @@ export default function Reports() {
     { month: 'شهریور', inflow: 680, outflow: 390 },
   ];
 
+  const handlePrint = () => {
+    let content = '';
+    if (activeReport === 'trial') {
+      content = `<table><thead><tr><th>کد حساب</th><th>نام حساب</th><th>نوع</th><th class="text-left">بدهکار</th><th class="text-left">بستانکار</th></tr></thead><tbody>`;
+      trialAccounts.forEach(a => {
+        content += `<tr><td>${a.code}</td><td>${a.name}</td><td>${a.type === 'asset' ? 'دارایی' : a.type === 'liability' ? 'بدهی' : a.type === 'equity' ? 'حقوق صاحبان سهام' : a.type === 'revenue' ? 'درآمد' : 'هزینه'}</td><td class="text-left font-mono">${a.debitBalance ? fmt(a.debitBalance) : '—'}</td><td class="text-left font-mono">${a.creditBalance ? fmt(a.creditBalance) : '—'}</td></tr>`;
+      });
+      content += `<tr class="total-row"><td colspan="3">جمع کل</td><td class="text-left font-mono">${fmt(totalDebit)}</td><td class="text-left font-mono">${fmt(totalCredit)}</td></tr></tbody></table>`;
+    } else if (activeReport === 'profit') {
+      content = `<table><tbody>
+        <tr><td>درآمد کل</td><td class="text-left font-mono">${fmt(totalRevenue)}</td></tr>
+        <tr><td>بهای تمام شده</td><td class="text-left font-mono">(${fmt(totalCOGS)})</td></tr>
+        <tr class="total-row"><td>سود ناخالص</td><td class="text-left font-mono">${fmt(grossProfit)}</td></tr>
+        <tr><td>هزینه‌های عملیاتی</td><td class="text-left font-mono">(${fmt(operatingExpenses)})</td></tr>
+        <tr class="total-row"><td>سود خالص</td><td class="text-left font-mono">${fmt(netProfit)}</td></tr>
+      </tbody></table>`;
+    } else if (activeReport === 'balance') {
+      content = `<table><tbody>
+        <tr><td>جمع دارایی‌ها</td><td class="text-left font-mono">${fmt(totalAssets)}</td></tr>
+        <tr><td>جمع بدهی‌ها</td><td class="text-left font-mono">${fmt(totalLiabilities)}</td></tr>
+        <tr><td>حقوق صاحبان سهام</td><td class="text-left font-mono">${fmt(totalEquity)}</td></tr>
+      </tbody></table>`;
+    }
+    const titles: Record<string, string> = { trial: 'تراز آزمایشی', profit: 'صورت سود و زیان', balance: 'ترازنامه', cashflow: 'گزارش جریان وجوه' };
+    printReport(titles[activeReport], content);
+  };
+
+  const handleExport = () => {
+    if (activeReport === 'trial') {
+      exportToCSV(trialAccounts.map(a => ({ code: a.code, name: a.name, type: a.type, debit: a.debitBalance, credit: a.creditBalance })), 'trial-balance', [
+        { key: 'code', label: 'کد حساب' }, { key: 'name', label: 'نام حساب' }, { key: 'type', label: 'نوع' }, { key: 'debit', label: 'بدهکار' }, { key: 'credit', label: 'بستانکار' }
+      ]);
+    } else if (activeReport === 'profit') {
+      exportToCSV([
+        { item: 'درآمد کل', amount: totalRevenue },
+        { item: 'بهای تمام شده', amount: totalCOGS },
+        { item: 'سود ناخالص', amount: grossProfit },
+        { item: 'هزینه‌های عملیاتی', amount: operatingExpenses },
+        { item: 'سود خالص', amount: netProfit },
+      ], 'profit-loss', [{ key: 'item', label: 'شرح' }, { key: 'amount', label: 'مبلغ' }]);
+    } else if (activeReport === 'balance') {
+      exportToCSV([
+        { item: 'جمع دارایی‌ها', amount: totalAssets },
+        { item: 'جمع بدهی‌ها', amount: totalLiabilities },
+        { item: 'حقوق صاحبان سهام', amount: totalEquity },
+      ], 'balance-sheet', [{ key: 'item', label: 'شرح' }, { key: 'amount', label: 'مبلغ' }]);
+    } else {
+      exportToCSV(cashFlowData, 'cash-flow', [{ key: 'month', label: 'ماه' }, { key: 'inflow', label: 'ورودی' }, { key: 'outflow', label: 'خروجی' }]);
+    }
+  };
+
   return (
     <div className="p-4 lg:p-6 space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -52,8 +104,8 @@ export default function Reports() {
           ))}
         </div>
         <div className="flex items-center gap-2">
-          <button className="btn btn-secondary text-xs"><Download size={14} /> Excel</button>
-          <button className="btn btn-secondary text-xs"><Printer size={14} /> چاپ</button>
+          <button onClick={handleExport} className="btn btn-secondary text-xs"><Download size={14} /> Excel</button>
+          <button onClick={handlePrint} className="btn btn-secondary text-xs"><Printer size={14} /> چاپ</button>
         </div>
       </div>
 

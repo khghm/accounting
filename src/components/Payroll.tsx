@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useStore, fmt, genId } from '../store/Store';
 import { PayrollRecord } from '../types';
-import { Plus, Search, Edit, Trash2, Users, DollarSign, Calculator } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Users, DollarSign, Calculator, Printer, Download } from 'lucide-react';
+import { printReport, exportToCSV } from '../utils/export';
 
 export default function Payroll() {
   const { payroll, setPayroll, showToast } = useStore();
@@ -17,6 +18,27 @@ export default function Payroll() {
       setPayroll(payroll.filter(r => r.id !== id));
       showToast('فیش حقوقی با موفقیت حذف شد');
     }
+  };
+
+  const handlePrint = () => {
+    let content = '<table><thead><tr><th>کد پرسنلی</th><th>نام</th><th class="text-left">حقوق پایه</th><th class="text-left">اضافه‌کار</th><th class="text-left">مالیات</th><th class="text-left">بیمه</th><th class="text-left">خالص</th><th>وضعیت</th></tr></thead><tbody>';
+    payroll.forEach(r => {
+      content += `<tr><td>${r.personnelCode}</td><td>${r.employeeName}</td><td class="text-left font-mono">${fmt(r.baseSalary)}</td><td class="text-left font-mono">${fmt(r.overtime + r.bonus)}</td><td class="text-left font-mono">(${fmt(r.tax)})</td><td class="text-left font-mono">(${fmt(r.insurance)})</td><td class="text-left font-mono">${fmt(r.netPay)}</td><td>${r.status === 'paid' ? 'پرداخت شده' : 'در انتظار'}</td></tr>`;
+    });
+    content += '</tbody></table>';
+    printReport('لیست حقوق و دستمزد', content);
+  };
+
+  const handleExport = () => {
+    const data = payroll.map(r => ({
+      personnelCode: r.personnelCode, employeeName: r.employeeName, baseSalary: r.baseSalary,
+      overtime: r.overtime, bonus: r.bonus, tax: r.tax, insurance: r.insurance, loan: r.loan, netPay: r.netPay, month: r.month,
+    }));
+    exportToCSV(data, 'payroll', [
+      { key: 'personnelCode', label: 'کد پرسنلی' }, { key: 'employeeName', label: 'نام' }, { key: 'baseSalary', label: 'حقوق پایه' },
+      { key: 'overtime', label: 'اضافه‌کار' }, { key: 'bonus', label: 'پاداش' }, { key: 'tax', label: 'مالیات' },
+      { key: 'insurance', label: 'بیمه' }, { key: 'loan', label: 'اقساط' }, { key: 'netPay', label: 'خالص' }, { key: 'month', label: 'ماه' }
+    ]);
   };
 
   return (
@@ -36,7 +58,11 @@ export default function Payroll() {
       <div className="flex items-center justify-between">
         <div className="relative"><Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" /><input type="text" placeholder="جستجوی پرسنل..." className="input pr-8 py-2 text-xs w-48" /></div>
         <div className="flex items-center gap-2">
-          <button onClick={() => { setEditing(null); setShowModal(true); }} className="btn btn-primary text-xs"><Plus size={14} /> فیش حقوقی جدید</button>
+          <div className="flex items-center gap-2">
+            <button onClick={handleExport} className="btn btn-secondary text-xs"><Download size={14} /> Excel</button>
+            <button onClick={handlePrint} className="btn btn-secondary text-xs"><Printer size={14} /> چاپ</button>
+            <button onClick={() => { setEditing(null); setShowModal(true); }} className="btn btn-primary text-xs"><Plus size={14} /> فیش حقوقی جدید</button>
+          </div>
         </div>
       </div>
 

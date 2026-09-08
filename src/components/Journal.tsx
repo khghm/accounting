@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useStore, fmt, genId } from '../store/Store';
 import { JournalEntry, JournalLine } from '../types';
-import { Plus, Search, Eye, Printer, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Search, Eye, Printer, Trash2, CheckCircle, XCircle, Download } from 'lucide-react';
+import { printReport, exportToCSV } from '../utils/export';
 
 export default function Journal() {
   const { journal, setJournal, accounts, showToast } = useStore();
@@ -13,6 +14,32 @@ export default function Journal() {
       setJournal(journal.filter(e => e.id !== id));
       showToast('سند با موفقیت حذف شد');
     }
+  };
+
+  const handlePrint = () => {
+    let content = '<table><thead><tr><th>شماره</th><th>تاریخ</th><th>شرح</th><th class="text-left">بدهکار</th><th class="text-left">بستانکار</th><th>وضعیت</th></tr></thead><tbody>';
+    journal.forEach(entry => {
+      const d = entry.lines.reduce((s, l) => s + l.debit, 0);
+      const c = entry.lines.reduce((s, l) => s + l.credit, 0);
+      content += `<tr><td>${entry.number}</td><td>${entry.date}</td><td>${entry.description}</td><td class="text-left font-mono">${fmt(d)}</td><td class="text-left font-mono">${fmt(c)}</td><td>${entry.status === 'posted' ? 'ثبت شده' : entry.status === 'draft' ? 'پیش‌نویس' : 'لغو'}</td></tr>`;
+    });
+    content += '</tbody></table>';
+    printReport('دفتر روزنامه', content);
+  };
+
+  const handleExport = () => {
+    const data = journal.map(entry => ({
+      number: entry.number,
+      date: entry.date,
+      description: entry.description,
+      debit: entry.lines.reduce((s, l) => s + l.debit, 0),
+      credit: entry.lines.reduce((s, l) => s + l.credit, 0),
+      status: entry.status === 'posted' ? 'ثبت شده' : entry.status === 'draft' ? 'پیش‌نویس' : 'لغو',
+    }));
+    exportToCSV(data, 'journal', [
+      { key: 'number', label: 'شماره' }, { key: 'date', label: 'تاریخ' }, { key: 'description', label: 'شرح' },
+      { key: 'debit', label: 'بدهکار' }, { key: 'credit', label: 'بستانکار' }, { key: 'status', label: 'وضعیت' }
+    ]);
   };
 
   return (
@@ -30,7 +57,8 @@ export default function Journal() {
           <select className="input py-2 text-xs w-32"><option>همه وضعیت‌ها</option><option>ثبت شده</option><option>پیش‌نویس</option></select>
         </div>
         <div className="flex items-center gap-2">
-          <button className="btn btn-secondary text-xs"><Printer size={14} /> چاپ</button>
+          <button onClick={handleExport} className="btn btn-secondary text-xs"><Download size={14} /> Excel</button>
+          <button onClick={handlePrint} className="btn btn-secondary text-xs"><Printer size={14} /> چاپ</button>
           <button onClick={() => setShowModal(true)} className="btn btn-primary text-xs"><Plus size={14} /> سند جدید</button>
         </div>
       </div>

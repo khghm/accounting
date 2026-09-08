@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useStore, fmt, genId } from '../store/Store';
 import { Check } from '../types';
-import { Plus, Search, Edit, Trash2, CreditCard, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, CreditCard, AlertTriangle, CheckCircle, XCircle, Printer, Download } from 'lucide-react';
+import { printReport, exportToCSV } from '../utils/export';
 
 export default function Checks() {
   const { checks, setChecks, showToast } = useStore();
@@ -17,6 +18,28 @@ export default function Checks() {
       setChecks(checks.filter(c => c.id !== id));
       showToast('چک با موفقیت حذف شد');
     }
+  };
+
+  const handlePrint = () => {
+    const statusLabels: Record<string, string> = { pending: 'در انتظار', cleared: 'وصول شده', bounced: 'برگشتی', deposited: 'سپرده شده' };
+    let content = '<table><thead><tr><th>شماره چک</th><th>نوع</th><th>بانک</th><th>طرف حساب</th><th>سررسید</th><th class="text-left">مبلغ</th><th>وضعیت</th></tr></thead><tbody>';
+    filtered.forEach(c => {
+      content += `<tr><td>${c.number}</td><td>${c.type === 'receivable' ? 'دریافتنی' : 'پرداختنی'}</td><td>${c.bank}</td><td>${c.party}</td><td>${c.dueDate}</td><td class="text-left font-mono">${fmt(c.amount)}</td><td>${statusLabels[c.status]}</td></tr>`;
+    });
+    content += '</tbody></table>';
+    printReport('لیست چک‌ها', content);
+  };
+
+  const handleExport = () => {
+    const statusLabels: Record<string, string> = { pending: 'در انتظار', cleared: 'وصول شده', bounced: 'برگشتی', deposited: 'سپرده شده' };
+    const data = filtered.map(c => ({
+      number: c.number, type: c.type === 'receivable' ? 'دریافتنی' : 'پرداختنی', bank: c.bank, party: c.party,
+      date: c.date, dueDate: c.dueDate, amount: c.amount, status: statusLabels[c.status],
+    }));
+    exportToCSV(data, 'checks', [
+      { key: 'number', label: 'شماره' }, { key: 'type', label: 'نوع' }, { key: 'bank', label: 'بانک' }, { key: 'party', label: 'طرف حساب' },
+      { key: 'date', label: 'تاریخ' }, { key: 'dueDate', label: 'سررسید' }, { key: 'amount', label: 'مبلغ' }, { key: 'status', label: 'وضعیت' }
+    ]);
   };
 
   const statusBadge = (s: string) => {
@@ -43,7 +66,11 @@ export default function Checks() {
             ))}
           </div>
         </div>
-        <button onClick={() => { setEditing(null); setShowModal(true); }} className="btn btn-primary text-xs"><Plus size={14} /> ثبت چک جدید</button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleExport} className="btn btn-secondary text-xs"><Download size={14} /> Excel</button>
+          <button onClick={handlePrint} className="btn btn-secondary text-xs"><Printer size={14} /> چاپ</button>
+          <button onClick={() => { setEditing(null); setShowModal(true); }} className="btn btn-primary text-xs"><Plus size={14} /> ثبت چک جدید</button>
+        </div>
       </div>
 
       <div className="table-container">

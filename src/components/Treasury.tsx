@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useStore, fmt, genId } from '../store/Store';
 import { Transaction } from '../types';
-import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Plus, Search, X } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Plus, Search, X, Printer, Download } from 'lucide-react';
+import { printReport, exportToCSV } from '../utils/export';
 
 export default function Treasury() {
   const { transactions, setTransactions, showToast } = useStore();
@@ -24,6 +25,26 @@ export default function Treasury() {
     }
   };
 
+  const handlePrint = () => {
+    let content = '<table><thead><tr><th>نوع</th><th>تاریخ</th><th>شرح</th><th>از حساب</th><th>به حساب</th><th class="text-left">مبلغ</th></tr></thead><tbody>';
+    filtered.forEach(t => {
+      content += `<tr><td>${t.type === 'receipt' ? 'دریافت' : t.type === 'payment' ? 'پرداخت' : 'انتقال'}</td><td>${t.date}</td><td>${t.description}</td><td>${t.fromAccount}</td><td>${t.toAccount}</td><td class="text-left font-mono">${fmt(t.amount)}</td></tr>`;
+    });
+    content += '</tbody></table>';
+    printReport('گزارش خزانه‌داری', content);
+  };
+
+  const handleExport = () => {
+    const data = filtered.map(t => ({
+      type: t.type === 'receipt' ? 'دریافت' : t.type === 'payment' ? 'پرداخت' : 'انتقال',
+      date: t.date, description: t.description, from: t.fromAccount, to: t.toAccount, amount: t.amount,
+    }));
+    exportToCSV(data, 'treasury', [
+      { key: 'type', label: 'نوع' }, { key: 'date', label: 'تاریخ' }, { key: 'description', label: 'شرح' },
+      { key: 'from', label: 'از حساب' }, { key: 'to', label: 'به حساب' }, { key: 'amount', label: 'مبلغ' }
+    ]);
+  };
+
   return (
     <div className="p-4 lg:p-6 space-y-4">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
@@ -42,7 +63,11 @@ export default function Treasury() {
             ))}
           </div>
         </div>
-        <button onClick={() => setShowModal(true)} className="btn btn-primary text-xs"><Plus size={14} /> عملیات جدید</button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleExport} className="btn btn-secondary text-xs"><Download size={14} /> Excel</button>
+          <button onClick={handlePrint} className="btn btn-secondary text-xs"><Printer size={14} /> چاپ</button>
+          <button onClick={() => setShowModal(true)} className="btn btn-primary text-xs"><Plus size={14} /> عملیات جدید</button>
+        </div>
       </div>
 
       <div className="table-container">

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore, fmt, genId } from '../store/Store';
 import { Invoice, InvoiceItem } from '../types';
 import { Plus, Search, Eye, Printer, Trash2, Edit, Download, X } from 'lucide-react';
+import { printReport, exportToCSV } from '../utils/export';
 
 export default function Invoices() {
   const { invoices, setInvoices, customers, showToast } = useStore();
@@ -22,6 +23,26 @@ export default function Invoices() {
       setInvoices(invoices.filter(i => i.id !== id));
       showToast('فاکتور با موفقیت حذف شد');
     }
+  };
+
+  const handlePrint = () => {
+    let content = '<table><thead><tr><th>شماره</th><th>نوع</th><th>تاریخ</th><th>سررسید</th><th>طرف حساب</th><th class="text-left">مبلغ کل</th><th>وضعیت</th></tr></thead><tbody>';
+    filtered.forEach(inv => {
+      content += `<tr><td>${inv.number}</td><td>${inv.type === 'sales' ? 'فروش' : 'خرید'}</td><td>${inv.date}</td><td>${inv.dueDate}</td><td>${inv.customerName}</td><td class="text-left font-mono">${fmt(inv.total)}</td><td>${inv.status === 'paid' ? 'پرداخت شده' : inv.status === 'overdue' ? 'معوق' : inv.status === 'sent' ? 'ارسال شده' : 'پیش‌نویس'}</td></tr>`;
+    });
+    content += '</tbody></table>';
+    printReport('لیست فاکتورها', content);
+  };
+
+  const handleExport = () => {
+    const data = filtered.map(inv => ({
+      number: inv.number, type: inv.type === 'sales' ? 'فروش' : 'خرید', date: inv.date, dueDate: inv.dueDate,
+      customer: inv.customerName, total: inv.total, status: inv.status === 'paid' ? 'پرداخت شده' : inv.status === 'overdue' ? 'معوق' : inv.status === 'sent' ? 'ارسال شده' : 'پیش‌نویس',
+    }));
+    exportToCSV(data, 'invoices', [
+      { key: 'number', label: 'شماره' }, { key: 'type', label: 'نوع' }, { key: 'date', label: 'تاریخ' }, { key: 'dueDate', label: 'سررسید' },
+      { key: 'customer', label: 'طرف حساب' }, { key: 'total', label: 'مبلغ کل' }, { key: 'status', label: 'وضعیت' }
+    ]);
   };
 
   const handleEdit = (inv: Invoice) => {
@@ -71,7 +92,11 @@ export default function Invoices() {
             ))}
           </div>
         </div>
-        <button onClick={() => { setEditingInvoice(null); setShowModal(true); }} className="btn btn-primary text-xs"><Plus size={14} /> فاکتور جدید</button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleExport} className="btn btn-secondary text-xs"><Download size={14} /> Excel</button>
+          <button onClick={handlePrint} className="btn btn-secondary text-xs"><Printer size={14} /> چاپ</button>
+          <button onClick={() => { setEditingInvoice(null); setShowModal(true); }} className="btn btn-primary text-xs"><Plus size={14} /> فاکتور جدید</button>
+        </div>
       </div>
 
       {/* Table */}

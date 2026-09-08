@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useStore, fmt, genId } from '../store/Store';
 import { Customer } from '../types';
-import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, User, Building, X } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, User, Building, X, Printer, Download } from 'lucide-react';
+import { printReport, exportToCSV } from '../utils/export';
 
 export default function Customers() {
   const { customers, setCustomers, showToast } = useStore();
@@ -22,6 +23,27 @@ export default function Customers() {
       setCustomers(customers.filter(c => c.id !== id));
       showToast('طرف حساب با موفقیت حذف شد');
     }
+  };
+
+  const handlePrint = () => {
+    const typeLabels: Record<string, string> = { customer: 'مشتری', supplier: 'تامین‌کننده', both: 'هر دو' };
+    let content = '<table><thead><tr><th>کد</th><th>نام</th><th>نوع</th><th>تلفن</th><th>ایمیل</th><th class="text-left">مانده</th></tr></thead><tbody>';
+    filtered.forEach(c => {
+      content += `<tr><td>${c.code}</td><td>${c.name}</td><td>${typeLabels[c.type]}</td><td dir="ltr">${c.phone}</td><td>${c.email}</td><td class="text-left font-mono">${fmt(c.balance)}</td></tr>`;
+    });
+    content += '</tbody></table>';
+    printReport('لیست طرف حساب‌ها', content);
+  };
+
+  const handleExport = () => {
+    const typeLabels: Record<string, string> = { customer: 'مشتری', supplier: 'تامین‌کننده', both: 'هر دو' };
+    const data = filtered.map(c => ({
+      code: c.code, name: c.name, type: typeLabels[c.type], phone: c.phone, email: c.email, address: c.address, balance: c.balance,
+    }));
+    exportToCSV(data, 'customers', [
+      { key: 'code', label: 'کد' }, { key: 'name', label: 'نام' }, { key: 'type', label: 'نوع' },
+      { key: 'phone', label: 'تلفن' }, { key: 'email', label: 'ایمیل' }, { key: 'address', label: 'آدرس' }, { key: 'balance', label: 'مانده' }
+    ]);
   };
 
   const typeBadge = (t: string) => { const m: Record<string, [string, string]> = { customer: ['badge-info', 'مشتری'], supplier: ['badge-warning', 'تامین‌کننده'], both: ['badge-purple', 'هر دو'] }; const [c, l] = m[t] || ['badge-slate', t]; return <span className={`badge ${c}`}>{l}</span>; };
@@ -48,7 +70,11 @@ export default function Customers() {
             <button onClick={() => setViewMode('table')} className={`px-2.5 py-2 text-xs ${viewMode === 'table' ? 'bg-emerald-600 text-white' : 'text-slate-600'}`}>جدول</button>
           </div>
         </div>
-        <button onClick={() => { setEditing(null); setShowModal(true); }} className="btn btn-primary text-xs"><Plus size={14} /> طرف حساب جدید</button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleExport} className="btn btn-secondary text-xs"><Download size={14} /> Excel</button>
+          <button onClick={handlePrint} className="btn btn-secondary text-xs"><Printer size={14} /> چاپ</button>
+          <button onClick={() => { setEditing(null); setShowModal(true); }} className="btn btn-primary text-xs"><Plus size={14} /> طرف حساب جدید</button>
+        </div>
       </div>
 
       {viewMode === 'grid' ? (

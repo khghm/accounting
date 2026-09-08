@@ -3,8 +3,13 @@ import { useStore, fmt } from '../store/Store';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, Legend } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, Users, ShoppingCart, AlertTriangle, ArrowUpRight, ArrowDownRight, Eye, Clock, FileText } from 'lucide-react';
 import { monthlyData, expenseCategories } from '../data/mockData';
+import { PageType } from '../types';
 
-export default function Dashboard() {
+interface DashboardProps {
+  onNavigate?: (page: PageType) => void;
+}
+
+export default function Dashboard({ onNavigate }: DashboardProps) {
   const { invoices, customers, products, journal, transactions, checks } = useStore();
 
   const totalRevenue = invoices.filter(i => i.type === 'sales').reduce((s, i) => s + i.total, 0);
@@ -107,7 +112,7 @@ export default function Dashboard() {
         <div className="card-static p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800">آخرین فاکتورها</h3>
-            <button className="text-sm text-emerald-600 hover:text-emerald-700">مشاهده همه</button>
+            <button onClick={() => onNavigate?.('invoices')} className="text-sm text-emerald-600 hover:text-emerald-700">مشاهده همه</button>
           </div>
           <div className="space-y-3">
             {recentInvoices.map((inv) => (

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useStore, fmt, genId } from '../store/Store';
 import { Product } from '../types';
-import { Plus, Search, Edit, Trash2, AlertTriangle, Package, X } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, AlertTriangle, Package, X, Printer, Download } from 'lucide-react';
+import { printReport, exportToCSV } from '../utils/export';
 
 export default function Products() {
   const { products, setProducts, showToast } = useStore();
@@ -16,6 +17,25 @@ export default function Products() {
       setProducts(products.filter(p => p.id !== id));
       showToast('کالا با موفقیت حذف شد');
     }
+  };
+
+  const handlePrint = () => {
+    let content = '<table><thead><tr><th>کد</th><th>نام کالا</th><th>دسته</th><th class="text-left">قیمت خرید</th><th class="text-left">قیمت فروش</th><th class="text-left">موجودی</th></tr></thead><tbody>';
+    filtered.forEach(p => {
+      content += `<tr><td>${p.code}</td><td>${p.name}</td><td>${p.category}</td><td class="text-left font-mono">${fmt(p.buyPrice)}</td><td class="text-left font-mono">${fmt(p.sellPrice)}</td><td class="text-left">${p.stock} ${p.unit}</td></tr>`;
+    });
+    content += '</tbody></table>';
+    printReport('لیست کالاها', content);
+  };
+
+  const handleExport = () => {
+    const data = filtered.map(p => ({
+      code: p.code, name: p.name, category: p.category, buyPrice: p.buyPrice, sellPrice: p.sellPrice, stock: p.stock, unit: p.unit,
+    }));
+    exportToCSV(data, 'products', [
+      { key: 'code', label: 'کد' }, { key: 'name', label: 'نام کالا' }, { key: 'category', label: 'دسته' },
+      { key: 'buyPrice', label: 'قیمت خرید' }, { key: 'sellPrice', label: 'قیمت فروش' }, { key: 'stock', label: 'موجودی' }, { key: 'unit', label: 'واحد' }
+    ]);
   };
 
   return (
@@ -36,7 +56,11 @@ export default function Products() {
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="relative"><Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" /><input type="text" placeholder="جستجوی کالا..." value={search} onChange={(e) => setSearch(e.target.value)} className="input pr-8 py-2 text-xs w-56" /></div>
-        <button onClick={() => { setEditing(null); setShowModal(true); }} className="btn btn-primary text-xs"><Plus size={14} /> کالای جدید</button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleExport} className="btn btn-secondary text-xs"><Download size={14} /> Excel</button>
+          <button onClick={handlePrint} className="btn btn-secondary text-xs"><Printer size={14} /> چاپ</button>
+          <button onClick={() => { setEditing(null); setShowModal(true); }} className="btn btn-primary text-xs"><Plus size={14} /> کالای جدید</button>
+        </div>
       </div>
 
       <div className="table-container">

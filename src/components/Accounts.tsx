@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useStore, fmt, genId } from '../store/Store';
 import { Account } from '../types';
-import { ChevronDown, ChevronLeft, Plus, Search, Edit, Trash2, FolderOpen, FileText, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, Plus, Search, Edit, Trash2, FolderOpen, FileText, X, Printer, Download } from 'lucide-react';
+import { printReport, exportToCSV } from '../utils/export';
 
 export default function Accounts() {
   const { accounts, setAccounts, showToast } = useStore();
@@ -24,6 +25,27 @@ export default function Accounts() {
       setAccounts(accounts.filter(a => a.id !== id));
       showToast('حساب با موفقیت حذف شد');
     }
+  };
+
+  const handlePrint = () => {
+    const typeLabels: Record<string, string> = { asset: 'دارایی', liability: 'بدهی', equity: 'حقوق صاحبان سهام', revenue: 'درآمد', expense: 'هزینه' };
+    let content = '<table><thead><tr><th>کد</th><th>نام حساب</th><th>نوع</th><th class="text-left">بدهکار</th><th class="text-left">بستانکار</th><th class="text-left">مانده</th></tr></thead><tbody>';
+    accounts.filter(a => a.level >= 3).forEach(a => {
+      content += `<tr><td>${a.code}</td><td>${a.name}</td><td>${typeLabels[a.type]}</td><td class="text-left font-mono">${a.debitBalance ? fmt(a.debitBalance) : '—'}</td><td class="text-left font-mono">${a.creditBalance ? fmt(a.creditBalance) : '—'}</td><td class="text-left font-mono">${fmt(a.balance)}</td></tr>`;
+    });
+    content += '</tbody></table>';
+    printReport('کدینگ حساب‌ها', content);
+  };
+
+  const handleExport = () => {
+    const typeLabels: Record<string, string> = { asset: 'دارایی', liability: 'بدهی', equity: 'حقوق صاحبان سهام', revenue: 'درآمد', expense: 'هزینه' };
+    const data = accounts.filter(a => a.level >= 3).map(a => ({
+      code: a.code, name: a.name, type: typeLabels[a.type], debit: a.debitBalance, credit: a.creditBalance, balance: a.balance,
+    }));
+    exportToCSV(data, 'accounts', [
+      { key: 'code', label: 'کد' }, { key: 'name', label: 'نام حساب' }, { key: 'type', label: 'نوع' },
+      { key: 'debit', label: 'بدهکار' }, { key: 'credit', label: 'بستانکار' }, { key: 'balance', label: 'مانده' }
+    ]);
   };
 
   const renderAccountRow = (account: Account, depth: number = 0) => {
@@ -59,7 +81,11 @@ export default function Accounts() {
           <div className="relative"><Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" /><input type="text" placeholder="جستجوی حساب..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="input pr-9 py-2 text-sm w-64" /></div>
           <select className="input py-2 text-sm w-40"><option>همه انواع</option><option>دارایی</option><option>بدهی</option><option>حقوق صاحبان سهام</option><option>درآمد</option><option>هزینه</option></select>
         </div>
-        <button onClick={() => { setEditing(null); setShowModal(true); }} className="btn btn-primary text-sm"><Plus size={16} /> حساب جدید</button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleExport} className="btn btn-secondary text-xs"><Download size={14} /> Excel</button>
+          <button onClick={handlePrint} className="btn btn-secondary text-xs"><Printer size={14} /> چاپ</button>
+          <button onClick={() => { setEditing(null); setShowModal(true); }} className="btn btn-primary text-sm"><Plus size={16} /> حساب جدید</button>
+        </div>
       </div>
 
       <div className="grid grid-cols-5 gap-3">
